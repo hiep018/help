@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.scheduling.annotation.Async; // Quan trọng
+import org.springframework.scheduling.annotation.Async; // Import quan trọng
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
@@ -20,7 +20,7 @@ public class RequestService {
     private RequestRepository requestRepository;
 
     @Autowired
-    private JavaMailSender javaMailSender; // Chuyển từ Controller sang
+    private JavaMailSender javaMailSender; // Chuyển biến này sang Service
 
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -36,17 +36,18 @@ public class RequestService {
         return requestRepository.findAll();
     }
     
-    // --- ĐÂY LÀ PHẦN QUAN TRỌNG: GỬI MAIL NGẦM ---
-    @Async // Lệnh này giúp web KHÔNG PHẢI CHỜ, gửi mail chạy riêng một luồng
+    // --- PHƯƠNG THỨC GỬI MAIL CHẠY NGẦM (ASYNC) ---
+    @Async // <-- Từ khóa này giúp web không phải chờ mail gửi xong
     public void sendRescueEmail(Request savedRequest) {
         try {
+            System.out.println(">> Bắt đầu gửi mail ngầm...");
             SimpleMailMessage mailMessage = new SimpleMailMessage();
             
             mailMessage.setFrom(fromEmail);
             mailMessage.setTo(rescueTeamEmail);
             mailMessage.setSubject("[YÊU CẦU CỨU HỘ MỚI] - " + savedRequest.getHelpType());
             
-            // Nội dung mail (Đã có fix link Google Maps chuẩn)
+            // Nội dung email (Code bạn đã sửa chuẩn)
             String messageBody = String.format(
                 "Một yêu cầu cứu hộ mới vừa được gửi:\n\n" +
                 "Loại yêu cầu: %s\n" +
@@ -67,15 +68,14 @@ public class RequestService {
             mailMessage.setText(messageBody);
             javaMailSender.send(mailMessage);
             
-            System.out.println(">>> (Async) Đã gửi mail thành công!");
+            System.out.println(">> (Async) Đã gửi mail thành công!");
 
         } catch (Exception e) {
-            // Lỗi thì in ra Log server, không làm phiền người dùng web
-            System.err.println(">>> (Async) Lỗi gửi mail: " + e.getMessage());
+            // Nếu lỗi (ví dụ Render chặn), nó chỉ in ra Log server, Web người dùng KHÔNG bị lỗi
+            System.err.println(">> (Async) Lỗi gửi mail: " + e.getMessage());
         }
     }
 
-    // Tự động xóa sau 5 ngày
     @Scheduled(cron = "0 0 1 * * *")
     public void deleteOldRequests() {
         LocalDateTime fiveDaysAgo = LocalDateTime.now().minusDays(5);
