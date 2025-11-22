@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Yêu cầu cứu trợ – Xã Phước Lộc (Leaflet)</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #map {
+      height: 60vh;
+      width: 100%;
+      margin-bottom: 30px;
+    }
+
+    header {
+      text-align: center;
+      background-color: #333;
+      color: white;
+      padding: 10px;
+    }
+
+    header h1 {
+      margin: 0;
+    }
+
+    #form-container {
+      padding: 20px;
+      background-color: #f8f8f8;
+      text-align: center;
+    }
+
+    .category-buttons {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 20px;
+    }
+
+    .category-buttons div {
+      background-color: #4CAF50;
+      color: white;
+      padding: 15px;
+      width: 100px;
+      text-align: center;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .category-buttons div:hover {
+      background-color: #45a049;
+    }
+
+    .category-buttons i {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .category-buttons div.disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+
+    textarea {
+      width: 80%;
+      height: 80px;
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 0;
+    }
+
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 8px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #requests-container {
+      margin: 20px;
+      padding: 10px;
+      background-color: #f8f8f8;
+    }
+
+    .request-item {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+    }
+
+    footer {
+      text-align: center;
+      padding: 10px;
+      background-color: #333;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Hỗ trợ Phước Lộc, Tuy Phước, Bình Định</h1>
+    <p>🌍 Chỉ hỗ trợ trong phạm vi <b>Xã Phước Lộc, Tuy Phước, Bình Định</b></p>
+  </header>
+
+  <div id="map"></div>
+
+  <div id="form-container">
+    <h2>Chọn loại yêu cầu cứu trợ</h2>
+    <div class="category-buttons">
+      <div id="medical-help" class="category-item">
+        <i class="fa-solid fa-hospital"></i><br>Cứu hộ y tế
+      </div>
+      <div id="accident" class="category-item">
+        <i class="fa-solid fa-car-burst"></i><br>Tai Nạn
+      </div>
+      <div id="food" class="category-item">
+        <i class="fa-solid fa-utensils"></i><br>Cung cấp thực phẩm
+      </div>
+      <div id="other" class="category-item">
+        <i class="fa-solid fa-users"></i><br>Khác
+      </div>
+    </div>
+    <textarea id="description" placeholder="mô tả trạng thái đang gặp và cần giúp về việc gì" required></textarea>
+    <button id="submit-request">Gửi yêu cầu</button>
+  </div>
+
+  <div id="requests-container">
+    <h2>Các yêu cầu đã gửi</h2>
+    <div id="requests-list"></div>
+  </div>
+
+  <footer>
+    <p>&copy; 2025 Phước Lộc - Tuy Phước, Bình Định</p>
+  </footer>
+
+  <script>
+    let map;
+    let marker = null;
+    let boundary;
+    let selectedHelpType = "";
+
+    // Hàm này sẽ tự chạy khi DOM sẵn sàng
+    document.addEventListener("DOMContentLoaded", function() {
+      // Khởi tạo bản đồ Leaflet
+      const myLatlng = [13.8492, 109.1350]; // Leaflet dùng [lat, lng]
+      map = L.map('map').setView(myLatlng, 13);
+
+      // Thêm lớp bản đồ nền (miễn phí từ OpenStreetMap)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+
+      // Vẽ ranh giới xã Phước Lộc
+      // Leaflet dùng [lat, lng]
+      const phuocLocPolygon = [
+        [13.8581, 109.1075],
+        [13.8618, 109.1238],
+        [13.8555, 109.1455],
+        [13.8430, 109.1530],
+        [13.8325, 109.1410],
+        [13.8285, 109.1230],
+        [13.8340, 109.1070],
+        [13.8485, 109.1015]
+      ];
+
+      boundary = L.polygon(phuocLocPolygon, {
+        color: 'red',
+        weight: 2,
+        opacity: 0.8,
+        fillColor: 'red',
+        fillOpacity: 0.1
+      }).addTo(map);
+
+      // Sự kiện click trên bản đồ để tạo marker
+      map.on('click', function(e) {
+        if (marker) {
+          map.removeLayer(marker); // Xóa marker cũ
+        }
+        
+        // e.latlng chứa tọa độ
+        const latlng = e.latlng;
+
+        // Kiểm tra vị trí có trong khu vực hỗ trợ
+        if (isPointInPolygon(latlng, boundary)) {
+          alert("✅ Vị trí này nằm trong khu vực hỗ trợ!");
+          marker = L.marker(latlng).addTo(map); // Thêm marker mới
+        } else {
+          alert("⚠️ Vị trí ngoài khu vực xã Phước Lộc – không được hỗ trợ.");
+          marker = null; // Đặt lại marker
+        }
+      });
+    });
+
+    // Hàm helper để kiểm tra điểm có nằm trong đa giác không
+    // (Sử dụng thuật toán Ray-casting)
+    function isPointInPolygon(point, polygon) {
+        let lat = point.lat;
+        let lng = point.lng;
+        let vertices = polygon.getLatLngs()[0]; // Lấy mảng tọa độ
+
+        let inside = false;
+        for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+            let vi = vertices[i], vj = vertices[j];
+            
+            let intersect = ((vi.lat > lat) !== (vj.lat > lat))
+                && (lng < (vj.lng - vi.lng) * (lat - vi.lat) / (vj.lat - vi.lat) + vi.lng);
+            
+            if (intersect) inside = !inside;
+        }
+        return inside;
+    }
+
+    // Lấy yêu cầu đã gửi từ server (Giữ nguyên, không đổi)
+    async function fetchRequests() {
+      try {
+        const response = await fetch('/get-requests'); 
+        const data = await response.json();
+        const requestsList = document.getElementById("requests-list");
+
+        requestsList.innerHTML = '';
+        data.forEach(request => {
+          const requestItem = document.createElement("div");
+          requestItem.className = "request-item";
+          requestItem.innerHTML = `
+            <strong>Loại yêu cầu:</strong> ${request.helpType}<br>
+            <strong>Mô tả:</strong> ${request.description}<br>
+            <strong>Vị trí:</strong> ${request.latitude}, ${request.longitude}<br>
+          `;
+          requestsList.appendChild(requestItem);
+        });
+      } catch (error) {
+        console.error("Lỗi khi lấy yêu cầu:", error);
+      }
+    }
+
+    fetchRequests();
+
+    // Bắt sự kiện chọn loại yêu cầu (Giữ nguyên, không đổi)
+    const categoryItems = document.querySelectorAll('.category-item');
+    categoryItems.forEach(item => {
+      item.addEventListener('click', () => {
+        categoryItems.forEach(otherItem => otherItem.classList.remove('disabled'));
+        item.classList.add('disabled');
+        selectedHelpType = item.innerText.trim(); 
+      });
+    });
+
+    // Gửi yêu cầu (Cập nhật 1 chút để lấy tọa độ)
+    document.getElementById("submit-request").addEventListener("click", async () => {
+      const helpType = selectedHelpType; 
+      const description = document.getElementById("description").value.trim();
+      
+      // SỬA CÁCH LẤY TỌA ĐỘ
+      const position = marker ? marker.getLatLng() : null;
+
+      if (!position) {
+        alert("Vui lòng chọn vị trí trên bản đồ.");
+        return;
+      }
+      if (!description) {
+        alert("Vui lòng nhập mô tả yêu cầu.");
+        return;
+      }
+      if (!helpType) {
+        alert("Vui lòng chọn loại yêu cầu.");
+        return;
+      }
+
+      // Kiểm tra trong ranh giới (đã làm lúc click)
+      // const inside = isPointInPolygon(position, boundary);
+      // if (!inside) {
+      //   alert("Yêu cầu của bạn nằm ngoài khu vực xã Phước Lộc.");
+      //   return;
+      // }
+
+      try {
+        const response = await fetch('/submit-request', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            helpType: helpType,
+            description: description,
+            // SỬA CÁCH LẤY TỌA ĐỘ
+            latitude: position.lat,
+            longitude: position.lng,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Lỗi khi gửi yêu cầu');
+        }
+
+        const data = await response.json();
+        alert(data.message); 
+        
+        document.getElementById("description").value = "";
+        categoryItems.forEach(item => item.classList.remove('disabled'));
+        selectedHelpType = "";
+        if (marker) map.removeLayer(marker); // Xóa marker
+        marker = null;
+        
+        fetchRequests();
+      } catch (error) {
+        alert('Lỗi khi gửi yêu cầu: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>

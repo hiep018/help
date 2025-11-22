@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-HelpApplication<help>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.rescue.help.HelpApplication",
+            "projectName": "help",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
