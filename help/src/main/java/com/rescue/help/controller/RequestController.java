@@ -78,7 +78,7 @@ public class RequestController {
                 savedRequest.getLongitude()         // 7
             );
             // --- KẾT THÚC PHẦN SỬA ---
-            
+            // Update fix mail cuoi cung
             mailMessage.setText(messageBody);
             
             // Gửi mail
