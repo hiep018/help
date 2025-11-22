@@ -67,6 +67,7 @@ public class RequestController {
                 // Thêm %f, %f vào cuối đường link để nhận tọa độ
                 "Link Google Maps:\nhttp://googleusercontent.com/maps.google.com/?q=%f,%f",
                 
+                
                 savedRequest.getHelpType(),         // 1
                 savedRequest.getDescription(),      // 2
                 savedRequest.getLatitude(),         // 3
