@@ -1,14 +1,13 @@
-# Giai đoạn 1: Build (Xây dựng file .jar)
-FROM maven:3.8.5-openjdk-17 AS build
+# Giai đoạn 1: Build
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 COPY . .
-# Dùng lệnh mvn của Docker để tránh lỗi dòng lệnh Windows
 RUN mvn clean package -DskipTests
 
-# Giai đoạn 2: Run (Chạy ứng dụng)
-FROM openjdk:17-jdk-slim
+# Giai đoạn 2: Run
+# Đổi sang ảnh nền eclipse-temurin để không bị lỗi "not found"
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-# Mở cổng 3040 như trong code của bạn
 EXPOSE 3040
 ENTRYPOINT ["java","-jar","app.jar"]
